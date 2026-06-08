@@ -5,12 +5,16 @@ const {
     addCheckIn,
     createInitialState,
     createCheckIn,
+    getChallengeProgress,
     getTodayLatestCheckIn,
     listCheckIns,
     normalizeState,
     saveCheckIn,
     saveReflection,
+    toggleChallengeDay,
     toggleFavorite,
+    toggleResourceComplete,
+    toggleResourceFavorite,
     markResourceComplete,
     recordResetSession,
     toggleChallengeStep
@@ -124,12 +128,58 @@ test('toggleFavorite adds and removes a resource id', () => {
     assert.deepEqual(removed.favorites, []);
 });
 
+test('toggleResourceFavorite safely toggles a known Vault resource', () => {
+    const allowed = ['three-minute-reset'];
+    const initial = createInitialState(fixedDate);
+    const saved = toggleResourceFavorite(initial, 'three-minute-reset', allowed, fixedDate);
+    const removed = toggleResourceFavorite(saved, 'three-minute-reset', allowed, fixedDate);
+
+    assert.deepEqual(saved.favorites, ['three-minute-reset']);
+    assert.deepEqual(removed.favorites, []);
+});
+
+test('toggleResourceFavorite ignores unknown resource ids', () => {
+    const initial = createInitialState(fixedDate);
+    const state = toggleResourceFavorite(initial, 'unknown-resource', ['three-minute-reset'], fixedDate);
+
+    assert.deepEqual(state, initial);
+});
+
 test('markResourceComplete records a resource only once', () => {
     const initial = createInitialState(fixedDate);
     const once = markResourceComplete(initial, 'roles-vs-me', fixedDate);
     const twice = markResourceComplete(once, 'roles-vs-me', fixedDate);
 
     assert.deepEqual(twice.completedResources, ['roles-vs-me']);
+});
+
+test('toggleResourceComplete safely toggles a known Vault resource', () => {
+    const allowed = ['before-i-burn-out'];
+    const initial = createInitialState(fixedDate);
+    const complete = toggleResourceComplete(initial, 'before-i-burn-out', allowed, fixedDate);
+    const incomplete = toggleResourceComplete(complete, 'before-i-burn-out', allowed, fixedDate);
+
+    assert.deepEqual(complete.completedResources, ['before-i-burn-out']);
+    assert.deepEqual(incomplete.completedResources, []);
+});
+
+test('toggleResourceComplete preserves check-ins while updating Vault state', () => {
+    const checkedIn = addCheckIn(createInitialState(fixedDate), {
+        mood: 'Hopeful',
+        nextStep: 'Drink coffee slowly.'
+    }, fixedDate);
+    const state = toggleResourceComplete(checkedIn, 'tiny-win-list', ['tiny-win-list'], fixedDate);
+
+    assert.equal(state.checkIns.length, 1);
+    assert.equal(state.checkIns[0].nextStep, 'Drink coffee slowly.');
+    assert.deepEqual(state.completedResources, ['tiny-win-list']);
+});
+
+test('toggleResourceComplete ignores unknown resource ids', () => {
+    const initial = createInitialState(fixedDate);
+    const state = toggleResourceComplete(initial, 'unknown-resource', ['tiny-win-list'], fixedDate);
+
+    assert.deepEqual(state, initial);
 });
 
 test('recordResetSession appends a completed reset', () => {
@@ -147,4 +197,30 @@ test('toggleChallengeStep keeps sorted challenge progress', () => {
 
     assert.deepEqual(first.challengeProgress['five-day-soft-reset'], [0, 2]);
     assert.deepEqual(removed.challengeProgress['five-day-soft-reset'], [0]);
+});
+
+test('toggleChallengeDay completes a starter challenge day', () => {
+    const allowed = ['day-1-heavy', 'day-2-need'];
+    const initial = createInitialState(fixedDate);
+    const state = toggleChallengeDay(initial, 'finding-yourself-again', 'day-1-heavy', allowed, fixedDate);
+
+    assert.deepEqual(state.challengeProgress['finding-yourself-again'], ['day-1-heavy']);
+});
+
+test('toggleChallengeDay ignores unknown day ids', () => {
+    const initial = createInitialState(fixedDate);
+    const state = toggleChallengeDay(initial, 'finding-yourself-again', 'missing-day', ['day-1-heavy'], fixedDate);
+
+    assert.deepEqual(state, initial);
+});
+
+test('getChallengeProgress counts completed known days only', () => {
+    const allowed = ['day-1-heavy', 'day-2-need', 'day-3-win'];
+    const withFirst = toggleChallengeDay(createInitialState(fixedDate), 'finding-yourself-again', 'day-1-heavy', allowed, fixedDate);
+    const withSecond = toggleChallengeDay(withFirst, 'finding-yourself-again', 'day-2-need', allowed, fixedDate);
+    const progress = getChallengeProgress(withSecond, 'finding-yourself-again', allowed, fixedDate);
+
+    assert.equal(progress.completed, 2);
+    assert.equal(progress.total, 3);
+    assert.deepEqual(progress.completedIds, ['day-1-heavy', 'day-2-need']);
 });

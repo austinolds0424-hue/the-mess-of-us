@@ -18,6 +18,8 @@
 
     const cleanText = (value) => String(value || '').trim();
 
+    const isAllowedId = (id, allowedIds) => !Array.isArray(allowedIds) || allowedIds.includes(id);
+
     const sortLatestFirst = (items) => [...items].sort((a, b) => (
         String(b.savedAt || '').localeCompare(String(a.savedAt || ''))
     ));
@@ -122,22 +124,34 @@
         };
     };
 
-    const toggleFavorite = (state, resourceId, date = new Date()) => {
+    const toggleResourceFavorite = (state, resourceId, allowedIds = null, date = new Date()) => {
         const current = normalizeState(state, date);
-        const id = String(resourceId || '').trim();
-        if (!id) return current;
+        const id = cleanText(resourceId);
+        if (!id || !isAllowedId(id, allowedIds)) return current;
         const favorites = current.favorites.includes(id)
             ? current.favorites.filter((item) => item !== id)
             : [...current.favorites, id];
         return { ...current, favorites };
     };
 
+    const toggleResourceComplete = (state, resourceId, allowedIds = null, date = new Date()) => {
+        const current = normalizeState(state, date);
+        const id = cleanText(resourceId);
+        if (!id || !isAllowedId(id, allowedIds)) return current;
+        const completedResources = current.completedResources.includes(id)
+            ? current.completedResources.filter((item) => item !== id)
+            : [...current.completedResources, id];
+        return { ...current, completedResources };
+    };
+
     const markResourceComplete = (state, resourceId, date = new Date()) => {
         const current = normalizeState(state, date);
-        const id = String(resourceId || '').trim();
+        const id = cleanText(resourceId);
         if (!id || current.completedResources.includes(id)) return current;
         return { ...current, completedResources: [...current.completedResources, id] };
     };
+
+    const toggleFavorite = (state, resourceId, date = new Date()) => toggleResourceFavorite(state, resourceId, null, date);
 
     const recordResetSession = (state, resetId = 'three-minute-reset', date = new Date()) => {
         const current = normalizeState(state, date);
@@ -152,7 +166,7 @@
 
     const toggleChallengeStep = (state, challengeId, stepIndex, date = new Date()) => {
         const current = normalizeState(state, date);
-        const id = String(challengeId || '').trim();
+        const id = cleanText(challengeId);
         const index = Number(stepIndex);
         if (!id || !Number.isInteger(index) || index < 0) return current;
 
@@ -170,6 +184,39 @@
         };
     };
 
+    const toggleChallengeDay = (state, challengeId, dayId, allowedDayIds = null, date = new Date()) => {
+        const current = normalizeState(state, date);
+        const id = cleanText(challengeId);
+        const day = cleanText(dayId);
+        if (!id || !day || !isAllowedId(day, allowedDayIds)) return current;
+
+        const existing = Array.isArray(current.challengeProgress[id]) ? current.challengeProgress[id] : [];
+        const next = existing.includes(day)
+            ? existing.filter((item) => item !== day)
+            : [...existing, day];
+
+        return {
+            ...current,
+            challengeProgress: {
+                ...current.challengeProgress,
+                [id]: next
+            }
+        };
+    };
+
+    const getChallengeProgress = (state, challengeId, dayIds = [], date = new Date()) => {
+        const current = normalizeState(state, date);
+        const id = cleanText(challengeId);
+        if (!id || !Array.isArray(dayIds)) return { completed: 0, total: 0, completedIds: [] };
+        const completedIds = (Array.isArray(current.challengeProgress[id]) ? current.challengeProgress[id] : [])
+            .filter((dayId) => dayIds.includes(dayId));
+        return {
+            completed: completedIds.length,
+            total: dayIds.length,
+            completedIds
+        };
+    };
+
     const api = {
         STORAGE_VERSION,
         todayKey,
@@ -181,10 +228,14 @@
         getTodayLatestCheckIn,
         saveCheckIn,
         saveReflection,
+        toggleResourceFavorite,
+        toggleResourceComplete,
         toggleFavorite,
         markResourceComplete,
         recordResetSession,
-        toggleChallengeStep
+        toggleChallengeStep,
+        toggleChallengeDay,
+        getChallengeProgress
     };
 
     global.MessState = api;

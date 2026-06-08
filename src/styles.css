@@ -410,10 +410,122 @@ legend {
     gap: 12px;
 }
 
+.resource-card.complete,
+.challenge-day.complete {
+    border-color: rgba(201, 135, 136, 0.34);
+    background: #fff8f5;
+}
+
 .card-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.filter-chip {
+    min-height: 34px;
+    border: 1px solid rgba(90, 75, 72, 0.12);
+    border-radius: 11px;
+    background: #fffaf7;
+    color: #735f5b;
+    padding: 7px 10px;
+    font-family: Arial, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.filter-chip.active {
+    border-color: rgba(201, 135, 136, 0.42);
+    background: #f1dedb;
+    color: var(--deep-cocoa);
+}
+
+.vault-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.vault-stats span {
+    border: 1px solid rgba(90, 75, 72, 0.1);
+    border-radius: 12px;
+    background: #fffaf7;
+    color: #735f5b;
+    padding: 10px 11px;
+    font-family: Arial, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.prompt-box {
+    margin-top: 10px;
+    border-left: 3px solid rgba(216, 155, 151, 0.55);
+    border-radius: 10px;
+    background: #fffaf7;
+    padding: 10px 11px;
+}
+
+.prompt-box span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--mauve-pink);
+    font-family: Arial, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.prompt-box p {
+    margin-bottom: 0;
+}
+
+.ghost-button.selected,
+.text-button.selected {
+    border-color: rgba(201, 135, 136, 0.42);
+    background: #f1dedb;
+    color: var(--deep-cocoa);
+}
+
+.challenge-progress {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.challenge-progress span {
+    color: #735f5b;
+    font-family: Arial, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.challenge-progress div {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(90, 75, 72, 0.09);
+}
+
+.challenge-progress i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--mauve-pink);
+}
+
+.challenge-day {
+    display: grid;
+    gap: 10px;
+    border: 1px solid rgba(90, 75, 72, 0.1);
+    border-radius: 14px;
+    background: #fffdfb;
+    padding: 13px;
 }
 
 .step-row {

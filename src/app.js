@@ -3,7 +3,8 @@
     const app = document.querySelector('#app');
     let state = MessStorage.loadState(MessState.createInitialState());
     const ui = {
-        activeTab: 'home'
+        activeTab: 'home',
+        vaultCategory: 'All'
     };
 
     const escapeHtml = (value) => String(value)
@@ -21,32 +22,66 @@
         render();
     };
 
-    const renderVaultCards = () => MessData.vaultResources.map((resource) => {
+    const vaultResourceIds = () => MessData.vaultResources.map((resource) => resource.id);
+
+    const challengeDayIds = () => MessData.starterChallenge.days.map((day) => day.id);
+
+    const renderVaultFilters = () => `
+        <div class="filter-row" aria-label="Vault categories">
+            ${MessData.vaultCategories.map((category) => `
+                <button class="filter-chip ${ui.vaultCategory === category ? 'active' : ''}" type="button" data-action="vault-filter" data-category="${escapeHtml(category)}">
+                    ${escapeHtml(category)}
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    const renderVaultCards = () => {
+        const resources = ui.vaultCategory === 'All'
+            ? MessData.vaultResources
+            : MessData.vaultResources.filter((resource) => resource.category === ui.vaultCategory);
+
+        return resources.map((resource) => {
         const favorite = state.favorites.includes(resource.id);
         const complete = state.completedResources.includes(resource.id);
         return `
-            <article class="resource-card">
+            <article class="resource-card ${complete ? 'complete' : ''}">
                 <div>
                     <p class="eyebrow">${escapeHtml(resource.category)} · ${escapeHtml(resource.time)}</p>
                     <h3>${escapeHtml(resource.title)}</h3>
                     <p>${escapeHtml(resource.description)}</p>
+                    <div class="prompt-box">
+                        <span>Prompt</span>
+                        <p>${escapeHtml(resource.prompt)}</p>
+                    </div>
                 </div>
                 <div class="card-actions">
-                    <button class="ghost-button" type="button" data-action="favorite" data-id="${escapeHtml(resource.id)}">${favorite ? 'Saved' : 'Save'}</button>
-                    <button class="text-button" type="button" data-action="complete-resource" data-id="${escapeHtml(resource.id)}">${complete ? 'Done' : 'Mark done'}</button>
+                    <button class="ghost-button ${favorite ? 'selected' : ''}" type="button" data-action="favorite" data-id="${escapeHtml(resource.id)}">${favorite ? 'Favorited' : 'Favorite'}</button>
+                    <button class="text-button ${complete ? 'selected' : ''}" type="button" data-action="complete-resource" data-id="${escapeHtml(resource.id)}">${complete ? 'Complete' : 'Mark complete'}</button>
                 </div>
             </article>
         `;
-    }).join('');
+        }).join('');
+    };
 
     const renderChallengeSteps = () => {
         const challenge = MessData.starterChallenge;
-        const done = state.challengeProgress[challenge.id] || [];
-        return challenge.steps.map((step, index) => `
-            <label class="step-row">
-                <input type="checkbox" data-action="challenge-step" data-index="${index}" ${done.includes(index) ? 'checked' : ''}>
-                <span>${escapeHtml(step)}</span>
-            </label>
+        const done = MessState.getChallengeProgress(state, challenge.id, challengeDayIds()).completedIds;
+        return challenge.days.map((day) => `
+            <article class="challenge-day ${done.includes(day.id) ? 'complete' : ''}">
+                <div>
+                    <p class="eyebrow">${escapeHtml(day.label)}</p>
+                    <h3>${escapeHtml(day.title)}</h3>
+                    <p>${escapeHtml(day.body)}</p>
+                    <div class="prompt-box">
+                        <span>Prompt</span>
+                        <p>${escapeHtml(day.prompt)}</p>
+                    </div>
+                </div>
+                <button class="text-button ${done.includes(day.id) ? 'selected' : ''}" type="button" data-action="challenge-day" data-id="${escapeHtml(day.id)}">
+                    ${done.includes(day.id) ? 'Complete' : 'Complete day'}
+                </button>
+            </article>
         `).join('');
     };
 
@@ -150,15 +185,28 @@
         }
 
         if (ui.activeTab === 'vault') {
+            const favoriteCount = state.favorites.filter((id) => vaultResourceIds().includes(id)).length;
+            const completedCount = state.completedResources.filter((id) => vaultResourceIds().includes(id)).length;
+            const challenge = MessData.starterChallenge;
+            const progress = MessState.getChallengeProgress(state, challenge.id, challengeDayIds());
             return `
                 <section class="screen-panel">
-                    <p class="eyebrow">Vault preview</p>
+                    <p class="eyebrow">Vault</p>
                     <h2>Small tools for messy days</h2>
+                    <div class="vault-stats">
+                        <span>${favoriteCount} favorites</span>
+                        <span>${completedCount} completed</span>
+                    </div>
+                    ${renderVaultFilters()}
                     <div class="resource-list">${renderVaultCards()}</div>
                     <aside class="panel challenge-panel">
                         <p class="eyebrow">Starter challenge</p>
-                        <h2>${escapeHtml(MessData.starterChallenge.title)}</h2>
-                        <p>${escapeHtml(MessData.starterChallenge.description)}</p>
+                        <h2>${escapeHtml(challenge.title)}</h2>
+                        <p>${escapeHtml(challenge.description)}</p>
+                        <div class="challenge-progress" aria-label="Challenge progress">
+                            <span>${progress.completed} of ${progress.total} days complete</span>
+                            <div><i style="width: ${progress.total ? (progress.completed / progress.total) * 100 : 0}%"></i></div>
+                        </div>
                         <div class="challenge-steps">${renderChallengeSteps()}</div>
                     </aside>
                 </section>
@@ -305,16 +353,31 @@
             return;
         }
 
+        if (button.dataset.action === 'vault-filter') {
+            ui.vaultCategory = button.dataset.category || 'All';
+            render();
+            return;
+        }
+
         if (button.dataset.action === 'complete-reset') {
             saveAndRender(MessState.recordResetSession(state));
         }
 
         if (button.dataset.action === 'favorite') {
-            saveAndRender(MessState.toggleFavorite(state, button.dataset.id));
+            saveAndRender(MessState.toggleResourceFavorite(state, button.dataset.id, vaultResourceIds()));
         }
 
         if (button.dataset.action === 'complete-resource') {
-            saveAndRender(MessState.markResourceComplete(state, button.dataset.id));
+            saveAndRender(MessState.toggleResourceComplete(state, button.dataset.id, vaultResourceIds()));
+        }
+
+        if (button.dataset.action === 'challenge-day') {
+            saveAndRender(MessState.toggleChallengeDay(
+                state,
+                MessData.starterChallenge.id,
+                button.dataset.id,
+                challengeDayIds()
+            ));
         }
     });
 
