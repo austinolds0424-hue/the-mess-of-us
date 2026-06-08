@@ -2,7 +2,11 @@
 const assert = require('node:assert/strict');
 const {
     STORAGE_VERSION,
+    addCheckIn,
     createInitialState,
+    createCheckIn,
+    getTodayLatestCheckIn,
+    listCheckIns,
     normalizeState,
     saveCheckIn,
     saveReflection,
@@ -18,7 +22,7 @@ test('createInitialState returns the expected local state shape', () => {
     const state = createInitialState(fixedDate);
 
     assert.equal(state.version, STORAGE_VERSION);
-    assert.deepEqual(state.checkIns, {});
+    assert.deepEqual(state.checkIns, []);
     assert.deepEqual(state.reflections, {});
     assert.deepEqual(state.resetSessions, []);
     assert.deepEqual(state.favorites, []);
@@ -30,18 +34,75 @@ test('normalizeState repairs invalid saved state', () => {
     const state = normalizeState({ favorites: ['a', 'a', ''], checkIns: null }, fixedDate);
 
     assert.deepEqual(state.favorites, ['a']);
-    assert.deepEqual(state.checkIns, {});
+    assert.deepEqual(state.checkIns, []);
     assert.equal(state.version, STORAGE_VERSION);
 });
 
-test('saveCheckIn stores today feeling and intention', () => {
+test('createCheckIn builds a valid check-in entry', () => {
+    const checkIn = createCheckIn({
+        mood: ' Overwhelmed ',
+        needToday: ' Drink water first. ',
+        feelsHeavy: 'The morning pileup.',
+        nextStep: 'Fill my cup.'
+    }, fixedDate);
+
+    assert.equal(checkIn.date, '2026-06-08');
+    assert.equal(checkIn.mood, 'Overwhelmed');
+    assert.equal(checkIn.needToday, 'Drink water first.');
+    assert.equal(checkIn.nextStep, 'Fill my cup.');
+});
+
+test('createCheckIn safely returns null for empty check-in data', () => {
+    assert.equal(createCheckIn({}, fixedDate), null);
+});
+
+test('addCheckIn preserves existing state when adding a check-in', () => {
+    const initial = toggleFavorite(createInitialState(fixedDate), 'three-breath-reset', fixedDate);
+    const state = addCheckIn(initial, {
+        mood: 'Hopeful',
+        needToday: 'A quiet start.'
+    }, fixedDate);
+
+    assert.deepEqual(state.favorites, ['three-breath-reset']);
+    assert.equal(state.checkIns.length, 1);
+    assert.equal(state.checkIns[0].mood, 'Hopeful');
+});
+
+test('addCheckIn safely ignores empty check-in data', () => {
+    const initial = createInitialState(fixedDate);
+    const state = addCheckIn(initial, {}, fixedDate);
+
+    assert.deepEqual(state, initial);
+});
+
+test('listCheckIns sorts latest check-ins first', () => {
+    const firstDate = new Date('2026-06-08T09:00:00.000Z');
+    const secondDate = new Date('2026-06-08T18:00:00.000Z');
+    const first = addCheckIn(createInitialState(firstDate), { mood: 'Stuck' }, firstDate);
+    const second = addCheckIn(first, { mood: 'Okay, but tired' }, secondDate);
+
+    assert.deepEqual(listCheckIns(second).map((entry) => entry.mood), ['Okay, but tired', 'Stuck']);
+});
+
+test('getTodayLatestCheckIn returns today latest saved check-in', () => {
+    const yesterday = new Date('2026-06-07T20:00:00.000Z');
+    const morning = new Date('2026-06-08T08:00:00.000Z');
+    const evening = new Date('2026-06-08T21:00:00.000Z');
+    const withYesterday = addCheckIn(createInitialState(yesterday), { mood: 'Exhausted' }, yesterday);
+    const withMorning = addCheckIn(withYesterday, { mood: 'Hopeful' }, morning);
+    const withEvening = addCheckIn(withMorning, { mood: 'Okay, but tired' }, evening);
+
+    assert.equal(getTodayLatestCheckIn(withEvening, morning).mood, 'Okay, but tired');
+});
+
+test('saveCheckIn remains an alias for adding a check-in', () => {
     const state = saveCheckIn(createInitialState(fixedDate), {
         feeling: ' Overwhelmed ',
         intention: ' Drink water first. '
     }, fixedDate);
 
-    assert.equal(state.checkIns['2026-06-08'].feeling, 'Overwhelmed');
-    assert.equal(state.checkIns['2026-06-08'].intention, 'Drink water first.');
+    assert.equal(state.checkIns[0].mood, 'Overwhelmed');
+    assert.equal(state.checkIns[0].needToday, 'Drink water first.');
 });
 
 test('saveReflection stores the evening prompts for today', () => {

@@ -6,7 +6,7 @@
     const createInitialState = (date = new Date()) => ({
         version: STORAGE_VERSION,
         createdAt: date.toISOString(),
-        checkIns: {},
+        checkIns: [],
         reflections: {},
         resetSessions: [],
         favorites: [],
@@ -16,6 +16,46 @@
 
     const unique = (items) => Array.from(new Set(items.filter(Boolean)));
 
+    const cleanText = (value) => String(value || '').trim();
+
+    const sortLatestFirst = (items) => [...items].sort((a, b) => (
+        String(b.savedAt || '').localeCompare(String(a.savedAt || ''))
+    ));
+
+    const normalizeCheckIn = (entry, fallbackDate = new Date()) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const savedAt = cleanText(entry.savedAt) || fallbackDate.toISOString();
+        const needToday = cleanText(entry.needToday || entry.intention);
+        const feelsHeavy = cleanText(entry.feelsHeavy);
+        const nextStep = cleanText(entry.nextStep);
+        const mood = cleanText(entry.mood || entry.feeling);
+        if (!mood && !needToday && !feelsHeavy && !nextStep) return null;
+
+        return {
+            id: cleanText(entry.id) || `checkin_${savedAt}`,
+            date: cleanText(entry.date) || savedAt.slice(0, 10),
+            mood,
+            needToday,
+            feelsHeavy,
+            nextStep,
+            savedAt
+        };
+    };
+
+    const normalizeCheckIns = (checkIns, date = new Date()) => {
+        if (Array.isArray(checkIns)) {
+            return sortLatestFirst(checkIns.map((entry) => normalizeCheckIn(entry, date)).filter(Boolean));
+        }
+
+        if (checkIns && typeof checkIns === 'object') {
+            return sortLatestFirst(Object.entries(checkIns)
+                .map(([day, entry]) => normalizeCheckIn({ ...entry, date: day }, date))
+                .filter(Boolean));
+        }
+
+        return [];
+    };
+
     const normalizeState = (state, date = new Date()) => {
         const initial = createInitialState(date);
         if (!state || typeof state !== 'object') return initial;
@@ -24,7 +64,7 @@
             ...initial,
             ...state,
             version: STORAGE_VERSION,
-            checkIns: state.checkIns && typeof state.checkIns === 'object' ? state.checkIns : {},
+            checkIns: normalizeCheckIns(state.checkIns, date),
             reflections: state.reflections && typeof state.reflections === 'object' ? state.reflections : {},
             resetSessions: Array.isArray(state.resetSessions) ? state.resetSessions : [],
             favorites: Array.isArray(state.favorites) ? unique(state.favorites) : [],
@@ -35,21 +75,35 @@
         };
     };
 
-    const saveCheckIn = (state, entry, date = new Date()) => {
+    const createCheckIn = (entry, date = new Date()) => normalizeCheckIn({
+        id: `checkin_${date.getTime()}`,
+        date: todayKey(date),
+        mood: entry?.mood || entry?.feeling,
+        needToday: entry?.needToday || entry?.intention,
+        feelsHeavy: entry?.feelsHeavy,
+        nextStep: entry?.nextStep,
+        savedAt: date.toISOString()
+    }, date);
+
+    const addCheckIn = (state, entry, date = new Date()) => {
         const current = normalizeState(state, date);
-        const key = todayKey(date);
+        const checkIn = createCheckIn(entry, date);
+        if (!checkIn) return current;
+
         return {
             ...current,
-            checkIns: {
-                ...current.checkIns,
-                [key]: {
-                    feeling: String(entry.feeling || '').trim(),
-                    intention: String(entry.intention || '').trim(),
-                    savedAt: date.toISOString()
-                }
-            }
+            checkIns: sortLatestFirst([...current.checkIns, checkIn])
         };
     };
+
+    const listCheckIns = (state, date = new Date()) => normalizeState(state, date).checkIns;
+
+    const getTodayLatestCheckIn = (state, date = new Date()) => {
+        const key = todayKey(date);
+        return listCheckIns(state, date).find((entry) => entry.date === key) || null;
+    };
+
+    const saveCheckIn = addCheckIn;
 
     const saveReflection = (state, entry, date = new Date()) => {
         const current = normalizeState(state, date);
@@ -121,6 +175,10 @@
         todayKey,
         createInitialState,
         normalizeState,
+        createCheckIn,
+        addCheckIn,
+        listCheckIns,
+        getTodayLatestCheckIn,
         saveCheckIn,
         saveReflection,
         toggleFavorite,

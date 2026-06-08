@@ -1,4 +1,42 @@
 ﻿(function (global) {
+    const moodChoices = [
+        'Overwhelmed',
+        'Exhausted',
+        'Hopeful',
+        'Stuck',
+        'Okay, but tired'
+    ];
+
+    const checkInPrompts = [
+        {
+            id: 'needToday',
+            label: 'What do you need today?'
+        },
+        {
+            id: 'feelsHeavy',
+            label: 'What feels heavy right now?'
+        },
+        {
+            id: 'nextStep',
+            label: 'What is one small thing you can do next?'
+        }
+    ];
+
+    const resetSteps = [
+        {
+            title: 'Breathe',
+            description: 'Take three slow breaths and let your shoulders drop.'
+        },
+        {
+            title: 'Name what is real',
+            description: 'Say what is happening without judging yourself for it.'
+        },
+        {
+            title: 'Choose one next step',
+            description: 'Pick one small thing you can do in the next few minutes.'
+        }
+    ];
+
     const vaultResources = [
         {
             id: 'three-breath-reset',
@@ -36,9 +74,21 @@
         ]
     };
 
-    global.MessData = { vaultResources, starterChallenge };
+    global.MessData = {
+        moodChoices,
+        checkInPrompts,
+        resetSteps,
+        vaultResources,
+        starterChallenge
+    };
 
     if (typeof module !== 'undefined') {
-        module.exports = { vaultResources, starterChallenge };
+        module.exports = {
+            moodChoices,
+            checkInPrompts,
+            resetSteps,
+            vaultResources,
+            starterChallenge
+        };
     }
 })(typeof window !== 'undefined' ? window : globalThis);

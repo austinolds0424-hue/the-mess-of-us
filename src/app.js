@@ -2,6 +2,9 @@
     const { MessData, MessState, MessStorage } = window;
     const app = document.querySelector('#app');
     let state = MessStorage.loadState(MessState.createInitialState());
+    const ui = {
+        activeTab: 'home'
+    };
 
     const escapeHtml = (value) => String(value)
         .replaceAll('&', '&amp;')
@@ -47,82 +50,224 @@
         `).join('');
     };
 
+    const renderMoodChoices = (selectedMood = '') => MessData.moodChoices.map((mood) => `
+        <label class="mood-choice">
+            <input type="radio" name="mood" value="${escapeHtml(mood)}" ${selectedMood === mood ? 'checked' : ''}>
+            <span>${escapeHtml(mood)}</span>
+        </label>
+    `).join('');
+
+    const renderCheckInHistory = () => {
+        const entries = MessState.listCheckIns(state).slice(0, 3);
+        if (!entries.length) {
+            return '<p class="quiet-note">No check-ins saved yet. Start with one honest sentence.</p>';
+        }
+
+        return `
+            <div class="history-list">
+                ${entries.map((entry) => `
+                    <article class="history-item">
+                        <p class="history-date">${escapeHtml(entry.date)} · ${escapeHtml(entry.mood || 'Checked in')}</p>
+                        <p>${escapeHtml(entry.nextStep || entry.needToday || entry.feelsHeavy || 'You paused for yourself today.')}</p>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    };
+
+    const renderTodaySummary = (checkIn) => checkIn.savedAt ? `
+        <div class="today-summary">
+            <p class="eyebrow">Latest today</p>
+            <h3>${escapeHtml(checkIn.mood || 'Checked in')}</h3>
+            <p>${escapeHtml(checkIn.nextStep || checkIn.needToday || 'You made a little room for yourself today.')}</p>
+        </div>
+    ` : `
+        <div class="empty-summary">
+            <p>No check-in saved yet today.</p>
+        </div>
+    `;
+
+    const renderCheckInForm = (checkIn) => `
+        <form data-form="check-in" class="stacked-form">
+            <fieldset class="mood-field">
+                <legend>How are you feeling?</legend>
+                <div class="mood-grid">${renderMoodChoices(checkIn.mood)}</div>
+            </fieldset>
+            <label>
+                What do you need today?
+                <textarea name="needToday" rows="2" placeholder="A break, help, quiet, food, a minute to breathe...">${escapeHtml(checkIn.needToday || '')}</textarea>
+            </label>
+            <label>
+                What feels heavy right now?
+                <textarea name="feelsHeavy" rows="2" placeholder="Name it without fixing it yet.">${escapeHtml(checkIn.feelsHeavy || '')}</textarea>
+            </label>
+            <label>
+                What is one small thing you can do next?
+                <textarea name="nextStep" rows="2" placeholder="Keep it tiny and doable.">${escapeHtml(checkIn.nextStep || '')}</textarea>
+            </label>
+            <button class="primary-button full-button" type="submit">Save check-in</button>
+        </form>
+    `;
+
+    const renderResetCard = (resetCount) => `
+        <article class="panel reset-panel">
+            <p class="eyebrow">3-minute reset</p>
+            <h2>Come back to right now.</h2>
+            <div class="reset-steps">
+                ${MessData.resetSteps.map((step, index) => `
+                    <article class="reset-step">
+                        <span>${index + 1}</span>
+                        <div>
+                            <h3>${escapeHtml(step.title)}</h3>
+                            <p>${escapeHtml(step.description)}</p>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+            <button class="primary-button full-button" type="button" data-action="complete-reset">I took the reset</button>
+            <p class="quiet-note">Resets saved: ${resetCount}</p>
+        </article>
+    `;
+
+    const renderTabContent = ({ checkIn, reflection, resetCount }) => {
+        if (ui.activeTab === 'checkin') {
+            return `
+                <section class="screen-panel">
+                    <p class="eyebrow">Daily check-in</p>
+                    <h2>Pause before the day takes over.</h2>
+                    ${renderTodaySummary(checkIn)}
+                    ${renderCheckInForm(checkIn)}
+                </section>
+            `;
+        }
+
+        if (ui.activeTab === 'reset') {
+            return `
+                <section class="screen-panel">
+                    ${renderResetCard(resetCount)}
+                </section>
+            `;
+        }
+
+        if (ui.activeTab === 'vault') {
+            return `
+                <section class="screen-panel">
+                    <p class="eyebrow">Vault preview</p>
+                    <h2>Small tools for messy days</h2>
+                    <div class="resource-list">${renderVaultCards()}</div>
+                    <aside class="panel challenge-panel">
+                        <p class="eyebrow">Starter challenge</p>
+                        <h2>${escapeHtml(MessData.starterChallenge.title)}</h2>
+                        <p>${escapeHtml(MessData.starterChallenge.description)}</p>
+                        <div class="challenge-steps">${renderChallengeSteps()}</div>
+                    </aside>
+                </section>
+            `;
+        }
+
+        if (ui.activeTab === 'journal') {
+            return `
+                <section class="screen-panel">
+                    <p class="eyebrow">Journal</p>
+                    <h2>Recent check-ins</h2>
+                    ${renderCheckInHistory()}
+                    <article class="panel reflection-panel">
+                        <p class="eyebrow">Evening reflection</p>
+                        <h2>Close the loop gently.</h2>
+                        <form data-form="reflection" class="reflection-grid">
+                            <label>
+                                What went well?
+                                <textarea name="wentWell" rows="3">${escapeHtml(reflection.wentWell || '')}</textarea>
+                            </label>
+                            <label>
+                                What challenged me?
+                                <textarea name="challenged" rows="3">${escapeHtml(reflection.challenged || '')}</textarea>
+                            </label>
+                            <label>
+                                One win from today
+                                <textarea name="win" rows="3">${escapeHtml(reflection.win || '')}</textarea>
+                            </label>
+                            <button class="primary-button full-button" type="submit">Save reflection</button>
+                        </form>
+                    </article>
+                </section>
+            `;
+        }
+
+        return `
+            <section class="home-stack">
+                <article class="status-card">
+                    <p class="eyebrow">Today</p>
+                    <h2>${checkIn.savedAt ? escapeHtml(checkIn.mood || 'Checked in') : 'Start with a small pause.'}</h2>
+                    <p>${escapeHtml(checkIn.nextStep || checkIn.needToday || 'Check in with yourself, take one reset, and let the rest wait a minute.')}</p>
+                </article>
+
+                <section class="quick-actions" aria-label="Quick actions">
+                    <button class="quick-card" type="button" data-action="tab" data-tab="checkin">
+                        <span>Check-In</span>
+                        <strong>Tell the truth gently</strong>
+                    </button>
+                    <button class="quick-card" type="button" data-action="tab" data-tab="reset">
+                        <span>Reset</span>
+                        <strong>Take 3 minutes</strong>
+                    </button>
+                </section>
+
+                <article class="panel compact-panel">
+                    <p class="eyebrow">Latest check-in</p>
+                    ${renderTodaySummary(checkIn)}
+                </article>
+
+                <article class="panel compact-panel">
+                    <p class="eyebrow">Journal</p>
+                    <h2>Recent check-ins</h2>
+                    ${renderCheckInHistory()}
+                </article>
+            </section>
+        `;
+    };
+
+    const renderBottomNav = () => {
+        const tabs = [
+            ['home', 'Home'],
+            ['checkin', 'Check-In'],
+            ['reset', 'Reset'],
+            ['vault', 'Vault'],
+            ['journal', 'Journal']
+        ];
+
+        return `
+            <nav class="bottom-nav" aria-label="Primary">
+                ${tabs.map(([id, label]) => `
+                    <button class="nav-tab ${ui.activeTab === id ? 'active' : ''}" type="button" data-action="tab" data-tab="${id}">
+                        <span>${escapeHtml(label)}</span>
+                    </button>
+                `).join('')}
+            </nav>
+        `;
+    };
+
     const render = () => {
-        const checkIn = state.checkIns[today()] || {};
+        const checkIn = MessState.getTodayLatestCheckIn(state, new Date()) || {};
         const reflection = state.reflections[today()] || {};
         const resetCount = state.resetSessions.length;
 
         app.innerHTML = `
-            <section class="hero-band">
-                <p class="eyebrow">Daily reset</p>
-                <h1>The Mess of Us</h1>
-                <p class="tagline">Where Chaos Is Welcome and the Coffee Is Always On</p>
-                <p class="intro">A quiet place to pause, check in, and choose one small next step before the day swallows you.</p>
-            </section>
+            <div class="phone-frame">
+                <header class="app-header">
+                    <div>
+                        <p class="eyebrow">Daily reset</p>
+                        <h1>The Mess of Us</h1>
+                    </div>
+                    <p>Chaos welcome. Coffee optional.</p>
+                </header>
 
-            <section class="dashboard-grid" aria-label="Today">
-                <article class="panel check-in-panel">
-                    <p class="eyebrow">Morning check-in</p>
-                    <h2>How are you arriving?</h2>
-                    <form data-form="check-in" class="stacked-form">
-                        <label>
-                            Feeling
-                            <select name="feeling">
-                                <option value="">Choose one</option>
-                                ${['Energized', 'Overwhelmed', 'Exhausted', 'Hopeful', 'Stuck'].map((feeling) => `<option value="${feeling}" ${checkIn.feeling === feeling ? 'selected' : ''}>${feeling}</option>`).join('')}
-                            </select>
-                        </label>
-                        <label>
-                            What matters most today?
-                            <textarea name="intention" rows="3" placeholder="One honest sentence is enough.">${escapeHtml(checkIn.intention || '')}</textarea>
-                        </label>
-                        <button class="primary-button" type="submit">Save check-in</button>
-                    </form>
-                </article>
+                <main class="app-content">
+                    ${renderTabContent({ checkIn, reflection, resetCount })}
+                </main>
 
-                <article class="panel reset-panel">
-                    <p class="eyebrow">3-minute reset</p>
-                    <h2>Put one hand on the day.</h2>
-                    <p>Take three slower breaths. Unclench your jaw. Name one thing you can do next.</p>
-                    <button class="primary-button" type="button" data-action="complete-reset">I took the reset</button>
-                    <p class="quiet-note">Resets saved: ${resetCount}</p>
-                </article>
-            </section>
-
-            <section class="panel reflection-panel">
-                <p class="eyebrow">Evening reflection</p>
-                <h2>Close the loop gently.</h2>
-                <form data-form="reflection" class="reflection-grid">
-                    <label>
-                        What went well?
-                        <textarea name="wentWell" rows="3">${escapeHtml(reflection.wentWell || '')}</textarea>
-                    </label>
-                    <label>
-                        What challenged me?
-                        <textarea name="challenged" rows="3">${escapeHtml(reflection.challenged || '')}</textarea>
-                    </label>
-                    <label>
-                        One win from today
-                        <textarea name="win" rows="3">${escapeHtml(reflection.win || '')}</textarea>
-                    </label>
-                    <button class="primary-button" type="submit">Save reflection</button>
-                </form>
-            </section>
-
-            <section class="content-grid">
-                <div>
-                    <p class="eyebrow">Vault preview</p>
-                    <h2>Small tools for messy days</h2>
-                    <div class="resource-list">${renderVaultCards()}</div>
-                </div>
-
-                <aside class="panel challenge-panel">
-                    <p class="eyebrow">Starter challenge</p>
-                    <h2>${escapeHtml(MessData.starterChallenge.title)}</h2>
-                    <p>${escapeHtml(MessData.starterChallenge.description)}</p>
-                    <div class="challenge-steps">${renderChallengeSteps()}</div>
-                </aside>
-            </section>
+                ${renderBottomNav()}
+            </div>
         `;
     };
 
@@ -133,9 +278,11 @@
         const formData = new FormData(form);
 
         if (form.dataset.form === 'check-in') {
-            saveAndRender(MessState.saveCheckIn(state, {
-                feeling: formData.get('feeling'),
-                intention: formData.get('intention')
+            saveAndRender(MessState.addCheckIn(state, {
+                mood: formData.get('mood'),
+                needToday: formData.get('needToday'),
+                feelsHeavy: formData.get('feelsHeavy'),
+                nextStep: formData.get('nextStep')
             }));
         }
 
@@ -151,6 +298,12 @@
     document.addEventListener('click', (event) => {
         const button = event.target.closest('button[data-action]');
         if (!button) return;
+
+        if (button.dataset.action === 'tab') {
+            ui.activeTab = button.dataset.tab || 'home';
+            render();
+            return;
+        }
 
         if (button.dataset.action === 'complete-reset') {
             saveAndRender(MessState.recordResetSession(state));
