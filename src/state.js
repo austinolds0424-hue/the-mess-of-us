@@ -19,6 +19,23 @@
 
     const cleanText = (value) => String(value || '').trim();
 
+    const normalizeTesterCode = (value) => cleanText(value).toUpperCase();
+
+    const isTesterCodeAllowed = (value, allowedCodes = []) => {
+        const code = normalizeTesterCode(value);
+        return !!code && Array.isArray(allowedCodes) && allowedCodes
+            .map((item) => normalizeTesterCode(item))
+            .includes(code);
+    };
+
+    const acceptTesterCode = (value, allowedCodes = []) => {
+        const code = normalizeTesterCode(value);
+        return {
+            accepted: isTesterCodeAllowed(code, allowedCodes),
+            code
+        };
+    };
+
     const isAllowedId = (id, allowedIds) => !Array.isArray(allowedIds) || allowedIds.includes(id);
 
     const sortLatestFirst = (items) => [...items].sort((a, b) => (
@@ -249,6 +266,9 @@
     const api = {
         STORAGE_VERSION,
         todayKey,
+        normalizeTesterCode,
+        isTesterCodeAllowed,
+        acceptTesterCode,
         createInitialState,
         normalizeState,
         createCheckIn,

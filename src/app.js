@@ -1,11 +1,13 @@
 ﻿(function () {
     const { MessData, MessState, MessStorage } = window;
     const app = document.querySelector('#app');
-    let state = MessStorage.loadState(MessState.createInitialState());
     const ui = {
         activeTab: 'home',
-        vaultCategory: 'All'
+        vaultCategory: 'All',
+        testerCodeError: ''
     };
+    let activeTesterCode = MessStorage.loadActiveTesterCode(MessData.allowedTesterCodes);
+    let state = MessStorage.loadState(MessState.createInitialState(), activeTesterCode);
 
     const escapeHtml = (value) => String(value)
         .replaceAll('&', '&amp;')
@@ -18,7 +20,7 @@
 
     const saveAndRender = (nextState) => {
         state = MessState.normalizeState(nextState);
-        MessStorage.saveState(state);
+        MessStorage.saveState(state, activeTesterCode);
         render();
     };
 
@@ -26,8 +28,37 @@
 
     const challengeDayIds = () => MessData.starterChallenge.days.map((day) => day.id);
 
+    const feedbackHref = () => {
+        const subject = `The Mess of Us Feedback - ${activeTesterCode || 'No tester code'}`;
+        const body = [
+            `Tester code: ${activeTesterCode || 'Not set'}`,
+            '',
+            ...MessData.feedbackLink.questions.flatMap((question) => [question, ''])
+        ].join('\n');
+        return `mailto:${MessData.feedbackLink.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
+
     const renderFeedbackLink = (className = 'feedback-link') => `
-        <a class="${className}" href="${escapeHtml(MessData.feedbackLink.href)}">${escapeHtml(MessData.feedbackLink.label)}</a>
+        <a class="${className}" href="${escapeHtml(feedbackHref())}">${escapeHtml(MessData.feedbackLink.label)}</a>
+    `;
+
+    const renderTesterGate = () => `
+        <section class="tester-gate" aria-label="Tester code">
+            <div class="onboarding-intro">
+                <p class="eyebrow">Early tester access</p>
+                <h2>Enter your tester code</h2>
+                <p>This keeps your test notes and progress separate on this device.</p>
+            </div>
+            <form data-form="tester-code" class="tester-form">
+                <label>
+                    Tester code
+                    <input name="testerCode" type="text" autocomplete="off" autocapitalize="characters" placeholder="MESS-LH-01" aria-describedby="tester-code-help">
+                </label>
+                <p id="tester-code-help" class="quiet-note">Use the code you were given for this preview.</p>
+                ${ui.testerCodeError ? `<p class="form-error" role="alert">${escapeHtml(ui.testerCodeError)}</p>` : ''}
+                <button class="primary-button full-button" type="submit">Continue</button>
+            </form>
+        </section>
     `;
 
     const renderReflectionSummary = (reflection) => {
@@ -188,9 +219,9 @@
                 <article class="status-card profile-hero">
                     <div class="profile-photo" aria-hidden="true">TM</div>
                     <div>
-                        <p class="eyebrow">Local profile</p>
-                        <h2>Your quiet progress</h2>
-                        <p>A static, local-only profile preview. Real accounts and synced profiles will come later.</p>
+                    <p class="eyebrow">Local profile</p>
+                    <h2>Your quiet progress</h2>
+                        <p>Tester code: ${escapeHtml(activeTesterCode)}. Real accounts and synced profiles will come later.</p>
                     </div>
                 </article>
                 <section class="stats-grid" aria-label="Local stats">
@@ -209,6 +240,8 @@
                 <div class="profile-actions">
                     ${renderFeedbackLink('feedback-link primary-feedback')}
                     <button class="ghost-button full-button" type="button" data-action="replay-onboarding">Replay welcome</button>
+                    <button class="ghost-button full-button" type="button" data-action="switch-tester">Switch tester code</button>
+                    <button class="danger-button full-button" type="button" data-action="reset-tester-data">Reset this tester's local data</button>
                 </div>
             </section>
         `;
@@ -457,6 +490,7 @@
         const checkIn = MessState.getTodayLatestCheckIn(state, new Date()) || {};
         const reflection = state.reflections[today()] || {};
         const resetCount = state.resetSessions.length;
+        const hasTesterCode = MessState.isTesterCodeAllowed(activeTesterCode, MessData.allowedTesterCodes);
         const onboarded = state.onboardingCompleted === true;
 
         app.innerHTML = `
@@ -470,10 +504,10 @@
                 </header>
 
                 <main class="app-content">
-                    ${onboarded ? renderTabContent({ checkIn, reflection, resetCount }) : renderOnboarding()}
+                    ${hasTesterCode ? (onboarded ? renderTabContent({ checkIn, reflection, resetCount }) : renderOnboarding()) : renderTesterGate()}
                 </main>
 
-                ${onboarded ? renderBottomNav() : ''}
+                ${hasTesterCode && onboarded ? renderBottomNav() : ''}
             </div>
         `;
     };
@@ -483,6 +517,23 @@
         if (!form) return;
         event.preventDefault();
         const formData = new FormData(form);
+
+        if (form.dataset.form === 'tester-code') {
+            const result = MessState.acceptTesterCode(formData.get('testerCode'), MessData.allowedTesterCodes);
+            if (!result.accepted) {
+                ui.testerCodeError = 'That tester code is not on the preview list. Check the code and try again.';
+                render();
+                return;
+            }
+
+            activeTesterCode = result.code;
+            ui.testerCodeError = '';
+            ui.activeTab = 'home';
+            MessStorage.saveActiveTesterCode(activeTesterCode);
+            state = MessStorage.loadState(MessState.createInitialState(), activeTesterCode);
+            render();
+            return;
+        }
 
         if (form.dataset.form === 'check-in') {
             saveAndRender(MessState.addCheckIn(state, {
@@ -520,6 +571,24 @@
 
         if (button.dataset.action === 'replay-onboarding') {
             saveAndRender(MessState.resetOnboarding(state));
+            return;
+        }
+
+        if (button.dataset.action === 'switch-tester') {
+            activeTesterCode = '';
+            ui.activeTab = 'home';
+            ui.testerCodeError = '';
+            state = MessState.createInitialState();
+            MessStorage.clearActiveTesterCode();
+            render();
+            return;
+        }
+
+        if (button.dataset.action === 'reset-tester-data') {
+            if (!window.confirm('Reset local data for this tester code only? Other tester codes will not be changed.')) return;
+            state = MessState.createInitialState();
+            MessStorage.clearState(activeTesterCode);
+            render();
             return;
         }
 

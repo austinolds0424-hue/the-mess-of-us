@@ -3,14 +3,17 @@ const assert = require('node:assert/strict');
 const {
     STORAGE_VERSION,
     addCheckIn,
+    acceptTesterCode,
     completeOnboarding,
     createInitialState,
     createCheckIn,
     getChallengeProgress,
     getProfileStats,
     getTodayLatestCheckIn,
+    isTesterCodeAllowed,
     listCheckIns,
     normalizeState,
+    normalizeTesterCode,
     saveCheckIn,
     saveReflection,
     toggleChallengeDay,
@@ -22,8 +25,20 @@ const {
     resetOnboarding,
     toggleChallengeStep
 } = require('../src/state.js');
+const MessStorage = require('../src/storage.js');
 
 const fixedDate = new Date('2026-06-08T12:00:00.000Z');
+const allowedTesterCodes = ['MESS-LH-01', 'MESS-LH-02', 'MESS-TEST-01'];
+
+const createLocalStorageMock = () => {
+    const values = new Map();
+    return {
+        getItem: (key) => values.has(key) ? values.get(key) : null,
+        setItem: (key, value) => values.set(key, String(value)),
+        removeItem: (key) => values.delete(key),
+        clear: () => values.clear()
+    };
+};
 
 test('createInitialState returns the expected local state shape', () => {
     const state = createInitialState(fixedDate);
@@ -45,6 +60,62 @@ test('normalizeState repairs invalid saved state', () => {
     assert.deepEqual(state.checkIns, []);
     assert.equal(state.version, STORAGE_VERSION);
     assert.equal(state.onboardingCompleted, false);
+});
+
+test('valid tester code is accepted case-insensitively and normalized', () => {
+    const result = acceptTesterCode(' mess-lh-01 ', allowedTesterCodes);
+
+    assert.equal(result.accepted, true);
+    assert.equal(result.code, 'MESS-LH-01');
+    assert.equal(normalizeTesterCode(' mess-test-01 '), 'MESS-TEST-01');
+    assert.equal(isTesterCodeAllowed('mess-lh-02', allowedTesterCodes), true);
+});
+
+test('invalid tester code is rejected', () => {
+    const result = acceptTesterCode('mess-nope', allowedTesterCodes);
+
+    assert.equal(result.accepted, false);
+    assert.equal(result.code, 'MESS-NOPE');
+});
+
+test('namespaced storage key is derived safely', () => {
+    assert.equal(MessStorage.getStateKey(' mess-lh-01 '), 'the-mess-of-us:state:MESS-LH-01');
+    assert.equal(MessStorage.getStateKey(''), MessStorage.LEGACY_STORAGE_KEY);
+});
+
+test('state for one tester does not overwrite another tester', () => {
+    const originalStorage = global.localStorage;
+    global.localStorage = createLocalStorageMock();
+
+    try {
+        const testerOne = addCheckIn(createInitialState(fixedDate), { mood: 'Hopeful' }, fixedDate);
+        const testerTwo = addCheckIn(createInitialState(fixedDate), { mood: 'Stuck' }, fixedDate);
+
+        MessStorage.saveState(testerOne, 'MESS-LH-01');
+        MessStorage.saveState(testerTwo, 'MESS-LH-02');
+
+        assert.equal(MessStorage.loadState(createInitialState(fixedDate), 'MESS-LH-01').checkIns[0].mood, 'Hopeful');
+        assert.equal(MessStorage.loadState(createInitialState(fixedDate), 'MESS-LH-02').checkIns[0].mood, 'Stuck');
+    } finally {
+        global.localStorage = originalStorage;
+    }
+});
+
+test('switching tester code does not delete tester data', () => {
+    const originalStorage = global.localStorage;
+    global.localStorage = createLocalStorageMock();
+
+    try {
+        const testerState = addCheckIn(createInitialState(fixedDate), { mood: 'Hopeful' }, fixedDate);
+        MessStorage.saveActiveTesterCode('MESS-LH-01');
+        MessStorage.saveState(testerState, 'MESS-LH-01');
+        MessStorage.clearActiveTesterCode();
+
+        assert.equal(MessStorage.loadActiveTesterCode(allowedTesterCodes), '');
+        assert.equal(MessStorage.loadState(createInitialState(fixedDate), 'MESS-LH-01').checkIns[0].mood, 'Hopeful');
+    } finally {
+        global.localStorage = originalStorage;
+    }
 });
 
 test('onboarding defaults to incomplete for new state', () => {

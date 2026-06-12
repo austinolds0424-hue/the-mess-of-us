@@ -164,8 +164,24 @@
 
     const feedbackLink = {
         label: 'Give feedback',
-        href: 'mailto:lheariehl@gmail.com?subject=The%20Mess%20of%20Us%20Feedback&body=What%20felt%20good%3F%0A%0AWhat%20felt%20confusing%3F%0A%0AWhat%20would%20make%20you%20come%20back%3F%0A%0AAny%20other%20thoughts%3F'
+        email: 'lheariehl@gmail.com',
+        questions: [
+            'What felt good?',
+            'What felt confusing?',
+            'What would make you come back?',
+            'Any other thoughts?'
+        ]
     };
+
+    const allowedTesterCodes = [
+        'MESS-AUSTIN',
+        'MESS-LH-01',
+        'MESS-LH-02',
+        'MESS-LH-03',
+        'MESS-TEST-01',
+        'MESS-TEST-02',
+        'MESS-TEST-03'
+    ];
 
     const starterChallenge = {
         id: 'finding-yourself-again',
@@ -221,6 +237,7 @@
         profilePlaceholders,
         onboardingCards,
         feedbackLink,
+        allowedTesterCodes,
         starterChallenge
     };
 
@@ -236,6 +253,7 @@
             profilePlaceholders,
             onboardingCards,
             feedbackLink,
+            allowedTesterCodes,
             starterChallenge
         };
     }
