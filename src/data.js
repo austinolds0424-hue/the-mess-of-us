@@ -162,6 +162,11 @@
         }
     ];
 
+    const feedbackLink = {
+        label: 'Give feedback',
+        href: 'mailto:lheariehl@gmail.com?subject=The%20Mess%20of%20Us%20Feedback&body=What%20felt%20good%3F%0A%0AWhat%20felt%20confusing%3F%0A%0AWhat%20would%20make%20you%20come%20back%3F%0A%0AAny%20other%20thoughts%3F'
+    };
+
     const starterChallenge = {
         id: 'finding-yourself-again',
         title: 'Finding Yourself Again',
@@ -215,6 +220,7 @@
         challengeCadences,
         profilePlaceholders,
         onboardingCards,
+        feedbackLink,
         starterChallenge
     };
 
@@ -229,6 +235,7 @@
             challengeCadences,
             profilePlaceholders,
             onboardingCards,
+            feedbackLink,
             starterChallenge
         };
     }

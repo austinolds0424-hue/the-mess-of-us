@@ -26,6 +26,10 @@
 
     const challengeDayIds = () => MessData.starterChallenge.days.map((day) => day.id);
 
+    const renderFeedbackLink = (className = 'feedback-link') => `
+        <a class="${className}" href="${escapeHtml(MessData.feedbackLink.href)}">${escapeHtml(MessData.feedbackLink.label)}</a>
+    `;
+
     const renderReflectionSummary = (reflection) => {
         if (!reflection.savedAt) {
             return '<p class="quiet-note">No evening reflection saved yet. The Journal is here when you want to close the loop gently.</p>';
@@ -202,7 +206,10 @@
                     </div>
                     <p class="quiet-note">These are placeholders only. No login, accounts, notifications, or synced trackers have been added.</p>
                 </article>
-                <button class="ghost-button full-button" type="button" data-action="replay-onboarding">Replay welcome</button>
+                <div class="profile-actions">
+                    ${renderFeedbackLink('feedback-link primary-feedback')}
+                    <button class="ghost-button full-button" type="button" data-action="replay-onboarding">Replay welcome</button>
+                </div>
             </section>
         `;
     };
@@ -417,6 +424,11 @@
                     <p class="eyebrow">Saved reflection</p>
                     ${renderReflectionSummary(reflection)}
                 </article>
+
+                <div class="home-footer">
+                    <span>Early preview</span>
+                    ${renderFeedbackLink()}
+                </div>
             </section>
         `;
     };
