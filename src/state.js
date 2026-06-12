@@ -11,7 +11,8 @@
         resetSessions: [],
         favorites: [],
         completedResources: [],
-        challengeProgress: {}
+        challengeProgress: {},
+        onboardingCompleted: false
     });
 
     const unique = (items) => Array.from(new Set(items.filter(Boolean)));
@@ -73,7 +74,8 @@
             completedResources: Array.isArray(state.completedResources) ? unique(state.completedResources) : [],
             challengeProgress: state.challengeProgress && typeof state.challengeProgress === 'object'
                 ? state.challengeProgress
-                : {}
+                : {},
+            onboardingCompleted: state.onboardingCompleted === true
         };
     };
 
@@ -234,6 +236,16 @@
         };
     };
 
+    const completeOnboarding = (state, date = new Date()) => ({
+        ...normalizeState(state, date),
+        onboardingCompleted: true
+    });
+
+    const resetOnboarding = (state, date = new Date()) => ({
+        ...normalizeState(state, date),
+        onboardingCompleted: false
+    });
+
     const api = {
         STORAGE_VERSION,
         todayKey,
@@ -253,7 +265,9 @@
         toggleChallengeStep,
         toggleChallengeDay,
         getChallengeProgress,
-        getProfileStats
+        getProfileStats,
+        completeOnboarding,
+        resetOnboarding
     };
 
     global.MessState = api;

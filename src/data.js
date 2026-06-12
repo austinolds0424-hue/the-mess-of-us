@@ -143,6 +143,25 @@
         'Boundaries'
     ];
 
+    const onboardingCards = [
+        {
+            title: 'Welcome to The Mess of Us',
+            body: 'A cozy reset space for the messy middle of real life.'
+        },
+        {
+            title: 'Start with today',
+            body: 'Check in with how you feel, what you need, and one small next step.'
+        },
+        {
+            title: 'Find what helps',
+            body: 'Use the Vault and Challenges when you need a prompt, reset tool, or gentle way back to yourself.'
+        },
+        {
+            title: 'Come back anytime',
+            body: 'The Village is a community preview for now, and your progress stays on this device.'
+        }
+    ];
+
     const starterChallenge = {
         id: 'finding-yourself-again',
         title: 'Finding Yourself Again',
@@ -195,6 +214,7 @@
         villageCategories,
         challengeCadences,
         profilePlaceholders,
+        onboardingCards,
         starterChallenge
     };
 
@@ -208,6 +228,7 @@
             villageCategories,
             challengeCadences,
             profilePlaceholders,
+            onboardingCards,
             starterChallenge
         };
     }

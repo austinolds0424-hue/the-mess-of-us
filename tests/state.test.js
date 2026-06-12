@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
     STORAGE_VERSION,
     addCheckIn,
+    completeOnboarding,
     createInitialState,
     createCheckIn,
     getChallengeProgress,
@@ -18,6 +19,7 @@ const {
     toggleResourceFavorite,
     markResourceComplete,
     recordResetSession,
+    resetOnboarding,
     toggleChallengeStep
 } = require('../src/state.js');
 
@@ -33,6 +35,7 @@ test('createInitialState returns the expected local state shape', () => {
     assert.deepEqual(state.favorites, []);
     assert.deepEqual(state.completedResources, []);
     assert.deepEqual(state.challengeProgress, {});
+    assert.equal(state.onboardingCompleted, false);
 });
 
 test('normalizeState repairs invalid saved state', () => {
@@ -41,6 +44,41 @@ test('normalizeState repairs invalid saved state', () => {
     assert.deepEqual(state.favorites, ['a']);
     assert.deepEqual(state.checkIns, []);
     assert.equal(state.version, STORAGE_VERSION);
+    assert.equal(state.onboardingCompleted, false);
+});
+
+test('onboarding defaults to incomplete for new state', () => {
+    const state = createInitialState(fixedDate);
+
+    assert.equal(state.onboardingCompleted, false);
+});
+
+test('completeOnboarding marks onboarding complete', () => {
+    const state = completeOnboarding(createInitialState(fixedDate), fixedDate);
+
+    assert.equal(state.onboardingCompleted, true);
+});
+
+test('resetOnboarding marks onboarding incomplete for replay', () => {
+    const completed = completeOnboarding(createInitialState(fixedDate), fixedDate);
+    const replay = resetOnboarding(completed, fixedDate);
+
+    assert.equal(replay.onboardingCompleted, false);
+});
+
+test('onboarding changes preserve existing local progress', () => {
+    const allowedResources = ['three-minute-reset'];
+    const allowedDays = ['day-1-heavy'];
+    const checkedIn = addCheckIn(createInitialState(fixedDate), { mood: 'Hopeful' }, fixedDate);
+    const favorited = toggleResourceFavorite(checkedIn, 'three-minute-reset', allowedResources, fixedDate);
+    const challenged = toggleChallengeDay(favorited, 'finding-yourself-again', 'day-1-heavy', allowedDays, fixedDate);
+    const onboarded = completeOnboarding(challenged, fixedDate);
+    const replay = resetOnboarding(onboarded, fixedDate);
+
+    assert.equal(replay.checkIns.length, 1);
+    assert.deepEqual(replay.favorites, ['three-minute-reset']);
+    assert.deepEqual(replay.challengeProgress['finding-yourself-again'], ['day-1-heavy']);
+    assert.equal(replay.onboardingCompleted, false);
 });
 
 test('createCheckIn builds a valid check-in entry', () => {

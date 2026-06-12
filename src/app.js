@@ -128,6 +128,31 @@
         </div>
     `;
 
+    const renderOnboarding = () => `
+        <section class="onboarding-screen" aria-label="Welcome to The Mess of Us">
+            <div class="onboarding-intro">
+                <p class="eyebrow">Welcome</p>
+                <h2>A daily reset space for the overwhelmed middle.</h2>
+                <p>The Mess of Us is for women and moms who need a softer place to pause, tell the truth, and choose one small next step.</p>
+            </div>
+            <div class="onboarding-cards">
+                ${MessData.onboardingCards.map((card, index) => `
+                    <article class="onboarding-card">
+                        <span>${index + 1}</span>
+                        <div>
+                            <h3>${escapeHtml(card.title)}</h3>
+                            <p>${escapeHtml(card.body)}</p>
+                        </div>
+                    </article>
+                `).join('')}
+            </div>
+            <div class="onboarding-actions">
+                <button class="primary-button full-button" type="button" data-action="finish-onboarding" data-next-tab="checkin">Start my reset</button>
+                <button class="text-button full-button" type="button" data-action="finish-onboarding" data-next-tab="home">Skip for now</button>
+            </div>
+        </section>
+    `;
+
     const renderVillagePreview = () => `
         <section class="screen-panel">
             <article class="status-card">
@@ -177,6 +202,7 @@
                     </div>
                     <p class="quiet-note">These are placeholders only. No login, accounts, notifications, or synced trackers have been added.</p>
                 </article>
+                <button class="ghost-button full-button" type="button" data-action="replay-onboarding">Replay welcome</button>
             </section>
         `;
     };
@@ -419,6 +445,7 @@
         const checkIn = MessState.getTodayLatestCheckIn(state, new Date()) || {};
         const reflection = state.reflections[today()] || {};
         const resetCount = state.resetSessions.length;
+        const onboarded = state.onboardingCompleted === true;
 
         app.innerHTML = `
             <div class="phone-frame">
@@ -431,10 +458,10 @@
                 </header>
 
                 <main class="app-content">
-                    ${renderTabContent({ checkIn, reflection, resetCount })}
+                    ${onboarded ? renderTabContent({ checkIn, reflection, resetCount }) : renderOnboarding()}
                 </main>
 
-                ${renderBottomNav()}
+                ${onboarded ? renderBottomNav() : ''}
             </div>
         `;
     };
@@ -470,6 +497,17 @@
         if (button.dataset.action === 'tab') {
             ui.activeTab = button.dataset.tab || 'home';
             render();
+            return;
+        }
+
+        if (button.dataset.action === 'finish-onboarding') {
+            ui.activeTab = button.dataset.nextTab || 'home';
+            saveAndRender(MessState.completeOnboarding(state));
+            return;
+        }
+
+        if (button.dataset.action === 'replay-onboarding') {
+            saveAndRender(MessState.resetOnboarding(state));
             return;
         }
 
