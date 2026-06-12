@@ -781,12 +781,12 @@ legend {
 
 .bottom-nav {
     position: absolute;
-    right: 10px;
+    right: 8px;
     bottom: 10px;
-    left: 10px;
+    left: 8px;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 4px;
+    gap: 5px;
     border: 1px solid rgba(90, 75, 72, 0.08);
     border-radius: 18px;
     background: rgba(255, 249, 245, 0.86);
@@ -801,10 +801,13 @@ legend {
     border-radius: 11px;
     background: transparent;
     color: #8a7671;
-    padding: 6px 4px;
+    min-width: 0;
+    padding: 6px 2px;
     font-family: Arial, sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
 }
 
 .nav-tab.active {
