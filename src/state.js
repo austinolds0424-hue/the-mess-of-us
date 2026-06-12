@@ -12,6 +12,7 @@
         favorites: [],
         completedResources: [],
         challengeProgress: {},
+        villageNotes: [],
         onboardingCompleted: false
     });
 
@@ -92,7 +93,25 @@
             challengeProgress: state.challengeProgress && typeof state.challengeProgress === 'object'
                 ? state.challengeProgress
                 : {},
+            villageNotes: Array.isArray(state.villageNotes)
+                ? sortLatestFirst(state.villageNotes.map((note) => normalizeVillageNote(note, date)).filter(Boolean))
+                : [],
             onboardingCompleted: state.onboardingCompleted === true
+        };
+    };
+
+    const normalizeVillageNote = (note, fallbackDate = new Date()) => {
+        if (!note || typeof note !== 'object') return null;
+        const createdAt = cleanText(note.createdAt) || fallbackDate.toISOString();
+        const body = cleanText(note.body);
+        if (!body) return null;
+
+        return {
+            id: cleanText(note.id) || `village_${createdAt}`,
+            createdAt,
+            category: cleanText(note.category) || 'Coffee Chat',
+            prompt: cleanText(note.prompt),
+            body
         };
     };
 
@@ -247,6 +266,7 @@
             checkInsCompleted: current.checkIns.length,
             vaultFavorites: current.favorites.filter((id) => resourceIds.includes(id)).length,
             vaultCompletions: current.completedResources.filter((id) => resourceIds.includes(id)).length,
+            villageNotes: current.villageNotes.length,
             challengeCompleted: challenge.completed,
             challengeTotal: challenge.total,
             challengePercent: challenge.total ? Math.round((challenge.completed / challenge.total) * 100) : 0
@@ -262,6 +282,38 @@
         ...normalizeState(state, date),
         onboardingCompleted: false
     });
+
+    const createVillageNote = (entry, date = new Date()) => normalizeVillageNote({
+        id: `village_${date.getTime()}`,
+        createdAt: date.toISOString(),
+        category: entry?.category,
+        prompt: entry?.prompt,
+        body: entry?.body
+    }, date);
+
+    const addVillageNote = (state, entry, date = new Date()) => {
+        const current = normalizeState(state, date);
+        const note = createVillageNote(entry, date);
+        if (!note) return current;
+
+        return {
+            ...current,
+            villageNotes: sortLatestFirst([note, ...current.villageNotes])
+        };
+    };
+
+    const listVillageNotes = (state, date = new Date()) => normalizeState(state, date).villageNotes;
+
+    const deleteVillageNote = (state, noteId, date = new Date()) => {
+        const current = normalizeState(state, date);
+        const id = cleanText(noteId);
+        if (!id) return current;
+
+        return {
+            ...current,
+            villageNotes: current.villageNotes.filter((note) => note.id !== id)
+        };
+    };
 
     const api = {
         STORAGE_VERSION,
@@ -287,7 +339,11 @@
         getChallengeProgress,
         getProfileStats,
         completeOnboarding,
-        resetOnboarding
+        resetOnboarding,
+        createVillageNote,
+        addVillageNote,
+        listVillageNotes,
+        deleteVillageNote
     };
 
     global.MessState = api;

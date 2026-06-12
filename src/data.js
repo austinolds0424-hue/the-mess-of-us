@@ -113,6 +113,13 @@
         }
     ];
 
+    const villagePrompts = [
+        'What do you wish someone understood today?',
+        'What are you carrying that feels heavy?',
+        'What small win deserves to be seen?',
+        'What would you ask the village if they were here?'
+    ];
+
     const challengeCadences = [
         {
             id: 'daily',
@@ -233,6 +240,7 @@
         vaultResources,
         vaultCategories,
         villageCategories,
+        villagePrompts,
         challengeCadences,
         profilePlaceholders,
         onboardingCards,
@@ -249,6 +257,7 @@
             vaultResources,
             vaultCategories,
             villageCategories,
+            villagePrompts,
             challengeCadences,
             profilePlaceholders,
             onboardingCards,

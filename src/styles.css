@@ -27,6 +27,7 @@ body {
 
 button,
 input,
+select,
 textarea {
     font: inherit;
 }
@@ -265,8 +266,19 @@ input {
     padding: 10px 12px;
 }
 
+select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid rgba(90, 75, 72, 0.14);
+    border-radius: 12px;
+    background: rgba(255, 253, 251, 0.76);
+    color: var(--deep-cocoa);
+    padding: 10px 12px;
+}
+
 textarea:focus,
 input:focus,
+select:focus,
 button:focus-visible {
     outline: 3px solid rgba(216, 155, 151, 0.34);
     outline-offset: 2px;
@@ -394,6 +406,12 @@ legend {
     font-weight: 800;
 }
 
+.danger-text {
+    color: #9a5e5e;
+    min-height: 34px;
+    padding: 6px 2px;
+}
+
 .quiet-note {
     margin: 10px 0 0;
     color: #8b7772;
@@ -404,6 +422,108 @@ legend {
 .section-copy {
     color: #735f5b;
     line-height: 1.45;
+}
+
+.village-intro {
+    border-bottom: 1px solid rgba(90, 75, 72, 0.08);
+    padding: 2px 2px 12px;
+}
+
+.village-intro p {
+    margin-bottom: 0;
+    color: #735f5b;
+    line-height: 1.45;
+}
+
+.village-composer {
+    display: grid;
+    gap: 12px;
+    border: 1px solid rgba(90, 75, 72, 0.08);
+    border-radius: 14px;
+    background: rgba(255, 253, 251, 0.58);
+    padding: 14px;
+}
+
+.prompt-choice-grid {
+    display: grid;
+    gap: 7px;
+}
+
+.prompt-choice {
+    display: block;
+}
+
+.prompt-choice input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.prompt-choice span {
+    display: block;
+    border: 1px solid rgba(90, 75, 72, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 250, 247, 0.58);
+    color: #735f5b;
+    padding: 9px 10px;
+    font-family: Arial, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.prompt-choice input:checked + span {
+    border-color: rgba(201, 135, 136, 0.42);
+    background: rgba(241, 222, 219, 0.72);
+    color: var(--deep-cocoa);
+}
+
+.village-notes {
+    display: grid;
+    gap: 9px;
+}
+
+.village-note-list {
+    display: grid;
+    gap: 10px;
+}
+
+.village-note {
+    border-top: 1px solid rgba(90, 75, 72, 0.08);
+    background: linear-gradient(180deg, rgba(255, 253, 251, 0.62), rgba(255, 250, 247, 0.4));
+    padding: 13px 2px 0;
+}
+
+.village-note p {
+    color: #735f5b;
+    line-height: 1.45;
+}
+
+.village-note-meta,
+.village-note-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.village-note-meta span,
+.village-note-footer span,
+.village-note-meta time {
+    color: #8b7772;
+    font-family: Arial, sans-serif;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.village-note-meta span {
+    color: var(--mauve-pink);
+}
+
+.village-note-prompt {
+    margin: 8px 0;
+    color: var(--deep-cocoa) !important;
+    font-weight: 700;
 }
 
 .history-list {

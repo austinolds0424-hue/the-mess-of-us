@@ -18,6 +18,17 @@
 
     const today = () => MessState.todayKey(new Date());
 
+    const formatNoteDate = (value) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Saved locally';
+        return date.toLocaleString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
+    };
+
     const saveAndRender = (nextState) => {
         state = MessState.normalizeState(nextState);
         MessStorage.saveState(state, activeTesterCode);
@@ -190,22 +201,68 @@
 
     const renderVillagePreview = () => `
         <section class="screen-panel">
-            <article class="status-card">
-                <p class="eyebrow">Village preview</p>
-                <h2>A soft landing for community, coming later.</h2>
-                <p>This is a static preview of the future Village. No posts, comments, likes, accounts, or database behavior are active yet.</p>
-            </article>
-            <div class="placeholder-grid">
-                ${MessData.villageCategories.map((category) => `
-                    <article class="placeholder-card">
-                        <p class="eyebrow">Thread category</p>
-                        <h3>${escapeHtml(category.title)}</h3>
-                        <p>${escapeHtml(category.description)}</p>
+            <section class="village-intro">
+                <p class="eyebrow">Private village notes</p>
+                <h2>Speak to the Village</h2>
+                <p>Write what you would say if the village was gathered around the table. For now, this stays private on this device.</p>
+            </section>
+            <form data-form="village-note" class="village-composer">
+                <label>
+                    Category
+                    <select name="category">
+                        ${MessData.villageCategories.map((category) => `<option value="${escapeHtml(category.title)}">${escapeHtml(category.title)}</option>`).join('')}
+                    </select>
+                </label>
+                <fieldset>
+                    <legend>Choose a prompt</legend>
+                    <div class="prompt-choice-grid">
+                        ${MessData.villagePrompts.map((prompt, index) => `
+                            <label class="prompt-choice">
+                                <input type="radio" name="prompt" value="${escapeHtml(prompt)}" ${index === 0 ? 'checked' : ''}>
+                                <span>${escapeHtml(prompt)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </fieldset>
+                <label>
+                    Your note
+                    <textarea name="body" rows="5" placeholder="Write it here..."></textarea>
+                </label>
+                <button class="primary-button full-button" type="submit">Save village note</button>
+                <p class="quiet-note">These notes are local to ${escapeHtml(activeTesterCode)} on this device.</p>
+            </form>
+            <section class="village-notes">
+                <p class="eyebrow">Recent notes</p>
+                ${renderVillageNotes()}
+            </section>
+        </section>
+    `;
+
+    const renderVillageNotes = () => {
+        const notes = MessState.listVillageNotes(state).slice(0, 6);
+        if (!notes.length) {
+            return '<p class="quiet-note">No Village notes saved yet. Write one thing you would say out loud if the table felt safe.</p>';
+        }
+
+        return `
+            <div class="village-note-list">
+                ${notes.map((note) => `
+                    <article class="village-note">
+                        <div class="village-note-meta">
+                            <span>${escapeHtml(note.category)}</span>
+                            <time>${escapeHtml(formatNoteDate(note.createdAt))}</time>
+                        </div>
+                        ${note.prompt ? `<p class="village-note-prompt">${escapeHtml(note.prompt)}</p>` : ''}
+                        <p>${escapeHtml(note.body)}</p>
+                        <div class="village-note-footer">
+                            <span>Saved privately</span>
+                            <button class="text-button danger-text" type="button" data-action="delete-village-note" data-id="${escapeHtml(note.id)}">Delete</button>
+                        </div>
                     </article>
                 `).join('')}
             </div>
-        </section>
-    `;
+        `;
+    };
 
     const renderProfile = () => {
         const stats = MessState.getProfileStats(state, {
@@ -226,6 +283,7 @@
                 </article>
                 <section class="stats-grid" aria-label="Local stats">
                     <article><span>${stats.checkInsCompleted}</span><p>check-ins completed</p></article>
+                    <article><span>${stats.villageNotes}</span><p>Village notes</p></article>
                     <article><span>${stats.vaultFavorites}</span><p>Vault favorites</p></article>
                     <article><span>${stats.vaultCompletions}</span><p>Vault completions</p></article>
                     <article><span>${stats.challengeCompleted}/${stats.challengeTotal}</span><p>challenge progress</p></article>
@@ -544,6 +602,15 @@
             }));
         }
 
+        if (form.dataset.form === 'village-note') {
+            saveAndRender(MessState.addVillageNote(state, {
+                category: formData.get('category'),
+                prompt: formData.get('prompt'),
+                body: formData.get('body')
+            }));
+            return;
+        }
+
         if (form.dataset.form === 'reflection') {
             saveAndRender(MessState.saveReflection(state, {
                 wentWell: formData.get('wentWell'),
@@ -589,6 +656,12 @@
             state = MessState.createInitialState();
             MessStorage.clearState(activeTesterCode);
             render();
+            return;
+        }
+
+        if (button.dataset.action === 'delete-village-note') {
+            if (!window.confirm('Delete this private Village note?')) return;
+            saveAndRender(MessState.deleteVillageNote(state, button.dataset.id));
             return;
         }
 

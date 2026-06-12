@@ -3,14 +3,18 @@ const assert = require('node:assert/strict');
 const {
     STORAGE_VERSION,
     addCheckIn,
+    addVillageNote,
     acceptTesterCode,
     completeOnboarding,
     createInitialState,
     createCheckIn,
+    createVillageNote,
+    deleteVillageNote,
     getChallengeProgress,
     getProfileStats,
     getTodayLatestCheckIn,
     isTesterCodeAllowed,
+    listVillageNotes,
     listCheckIns,
     normalizeState,
     normalizeTesterCode,
@@ -50,6 +54,7 @@ test('createInitialState returns the expected local state shape', () => {
     assert.deepEqual(state.favorites, []);
     assert.deepEqual(state.completedResources, []);
     assert.deepEqual(state.challengeProgress, {});
+    assert.deepEqual(state.villageNotes, []);
     assert.equal(state.onboardingCompleted, false);
 });
 
@@ -60,6 +65,67 @@ test('normalizeState repairs invalid saved state', () => {
     assert.deepEqual(state.checkIns, []);
     assert.equal(state.version, STORAGE_VERSION);
     assert.equal(state.onboardingCompleted, false);
+});
+
+test('createVillageNote builds a valid local village note', () => {
+    const note = createVillageNote({
+        category: 'Wins',
+        prompt: 'What small win deserves to be seen?',
+        body: 'I made the call I was avoiding.'
+    }, fixedDate);
+
+    assert.equal(note.category, 'Wins');
+    assert.equal(note.prompt, 'What small win deserves to be seen?');
+    assert.equal(note.body, 'I made the call I was avoiding.');
+    assert.equal(note.createdAt, fixedDate.toISOString());
+});
+
+test('createVillageNote safely returns null for empty note body', () => {
+    assert.equal(createVillageNote({ category: 'Wins', body: '   ' }, fixedDate), null);
+});
+
+test('listVillageNotes sorts newest village notes first', () => {
+    const firstDate = new Date('2026-06-08T09:00:00.000Z');
+    const secondDate = new Date('2026-06-08T18:00:00.000Z');
+    const first = addVillageNote(createInitialState(firstDate), {
+        category: 'Coffee Chat',
+        prompt: 'What do you wish someone understood today?',
+        body: 'The morning was a lot.'
+    }, firstDate);
+    const second = addVillageNote(first, {
+        category: 'Wins',
+        prompt: 'What small win deserves to be seen?',
+        body: 'I took a real lunch.'
+    }, secondDate);
+
+    assert.deepEqual(listVillageNotes(second).map((note) => note.body), ['I took a real lunch.', 'The morning was a lot.']);
+});
+
+test('deleteVillageNote removes a saved village note', () => {
+    const state = addVillageNote(createInitialState(fixedDate), {
+        category: 'Ask the Village',
+        prompt: 'What would you ask the village if they were here?',
+        body: 'How do you ask for help without spiraling?'
+    }, fixedDate);
+    const removed = deleteVillageNote(state, state.villageNotes[0].id, fixedDate);
+
+    assert.deepEqual(removed.villageNotes, []);
+});
+
+test('village notes preserve check-ins, vault state, and challenge progress', () => {
+    const checkedIn = addCheckIn(createInitialState(fixedDate), { mood: 'Hopeful' }, fixedDate);
+    const favorited = toggleResourceFavorite(checkedIn, 'roles-vs-me', ['roles-vs-me'], fixedDate);
+    const challenged = toggleChallengeDay(favorited, 'finding-yourself-again', 'day-1-heavy', ['day-1-heavy'], fixedDate);
+    const withNote = addVillageNote(challenged, {
+        category: 'Coffee Chat',
+        prompt: 'What do you wish someone understood today?',
+        body: 'I need softer mornings.'
+    }, fixedDate);
+
+    assert.equal(withNote.checkIns.length, 1);
+    assert.deepEqual(withNote.favorites, ['roles-vs-me']);
+    assert.deepEqual(withNote.challengeProgress['finding-yourself-again'], ['day-1-heavy']);
+    assert.equal(withNote.villageNotes.length, 1);
 });
 
 test('valid tester code is accepted case-insensitively and normalized', () => {
@@ -353,6 +419,7 @@ test('getProfileStats calculates local profile totals', () => {
     }, fixedDate);
 
     assert.equal(stats.checkInsCompleted, 1);
+    assert.equal(stats.villageNotes, 0);
     assert.equal(stats.vaultFavorites, 1);
     assert.equal(stats.vaultCompletions, 1);
     assert.equal(stats.challengeCompleted, 1);
@@ -367,6 +434,7 @@ test('getProfileStats safely handles unknown and empty state', () => {
         checkInsCompleted: 0,
         vaultFavorites: 0,
         vaultCompletions: 0,
+        villageNotes: 0,
         challengeCompleted: 0,
         challengeTotal: 0,
         challengePercent: 0
