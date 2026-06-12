@@ -45,6 +45,9 @@ button {
 
 .phone-frame {
     position: relative;
+    display: flex;
+    height: calc(100vh - 28px);
+    flex-direction: column;
     min-height: calc(100vh - 28px);
     overflow: hidden;
     border: 1px solid rgba(90, 75, 72, 0.08);
@@ -78,10 +81,10 @@ button {
 }
 
 .app-content {
-    min-height: calc(100vh - 174px);
-    max-height: calc(100vh - 174px);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 14px 13px 86px;
+    padding: 14px 13px 22px;
 }
 
 .eyebrow {
@@ -247,6 +250,7 @@ label {
 }
 
 textarea {
+    box-sizing: border-box;
     width: 100%;
     border: 1px solid rgba(90, 75, 72, 0.14);
     border-radius: 12px;
@@ -257,6 +261,7 @@ textarea {
 }
 
 input {
+    box-sizing: border-box;
     width: 100%;
     min-height: 44px;
     border: 1px solid rgba(90, 75, 72, 0.14);
@@ -267,6 +272,7 @@ input {
 }
 
 select {
+    box-sizing: border-box;
     width: 100%;
     min-height: 44px;
     border: 1px solid rgba(90, 75, 72, 0.14);
@@ -455,6 +461,8 @@ legend {
 
 .prompt-choice input {
     position: absolute;
+    width: auto;
+    min-height: 0;
     opacity: 0;
     pointer-events: none;
 }
@@ -943,13 +951,15 @@ legend {
 }
 
 .bottom-nav {
-    position: absolute;
-    right: 8px;
-    bottom: 10px;
-    left: 8px;
+    position: sticky;
+    right: auto;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    left: auto;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 5px;
+    flex: 0 0 auto;
+    margin: 0 8px calc(10px + env(safe-area-inset-bottom));
     border: 1px solid rgba(90, 75, 72, 0.08);
     border-radius: 18px;
     background: rgba(255, 249, 245, 0.86);
@@ -959,7 +969,7 @@ legend {
 }
 
 .nav-tab {
-    min-height: 38px;
+    min-height: 44px;
     border: 0;
     border-radius: 11px;
     background: transparent;
@@ -984,12 +994,8 @@ legend {
     }
 
     .phone-frame {
+        height: calc(100vh - 44px);
         min-height: calc(100vh - 44px);
-    }
-
-    .app-content {
-        min-height: calc(100vh - 182px);
-        max-height: calc(100vh - 182px);
     }
 }
 
@@ -999,15 +1005,16 @@ legend {
     }
 
     .phone-frame {
+        height: 100vh;
+        height: 100dvh;
         min-height: 100vh;
         border: 0;
         border-radius: 0;
     }
 
     .app-content {
-        min-height: calc(100vh - 138px);
-        max-height: calc(100vh - 138px);
         padding-right: 12px;
+        padding-bottom: 22px;
         padding-left: 12px;
     }
 
@@ -1016,8 +1023,7 @@ legend {
     }
 
     .bottom-nav {
-        right: 8px;
-        bottom: 8px;
-        left: 8px;
+        bottom: calc(8px + env(safe-area-inset-bottom));
+        margin: 0 8px calc(8px + env(safe-area-inset-bottom));
     }
 }
