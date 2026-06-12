@@ -6,6 +6,7 @@ const {
     createInitialState,
     createCheckIn,
     getChallengeProgress,
+    getProfileStats,
     getTodayLatestCheckIn,
     listCheckIns,
     normalizeState,
@@ -223,4 +224,42 @@ test('getChallengeProgress counts completed known days only', () => {
     assert.equal(progress.completed, 2);
     assert.equal(progress.total, 3);
     assert.deepEqual(progress.completedIds, ['day-1-heavy', 'day-2-need']);
+});
+
+test('getProfileStats calculates local profile totals', () => {
+    const allowedResources = ['three-minute-reset', 'roles-vs-me'];
+    const allowedDays = ['day-1-heavy', 'day-2-need', 'day-3-win'];
+    const checkedIn = addCheckIn(createInitialState(fixedDate), {
+        mood: 'Hopeful',
+        needToday: 'A clear table.'
+    }, fixedDate);
+    const favorited = toggleResourceFavorite(checkedIn, 'three-minute-reset', allowedResources, fixedDate);
+    const completed = toggleResourceComplete(favorited, 'roles-vs-me', allowedResources, fixedDate);
+    const challenged = toggleChallengeDay(completed, 'finding-yourself-again', 'day-1-heavy', allowedDays, fixedDate);
+
+    const stats = getProfileStats(challenged, {
+        resourceIds: allowedResources,
+        challengeId: 'finding-yourself-again',
+        challengeDayIds: allowedDays
+    }, fixedDate);
+
+    assert.equal(stats.checkInsCompleted, 1);
+    assert.equal(stats.vaultFavorites, 1);
+    assert.equal(stats.vaultCompletions, 1);
+    assert.equal(stats.challengeCompleted, 1);
+    assert.equal(stats.challengeTotal, 3);
+    assert.equal(stats.challengePercent, 33);
+});
+
+test('getProfileStats safely handles unknown and empty state', () => {
+    const stats = getProfileStats(null, {}, fixedDate);
+
+    assert.deepEqual(stats, {
+        checkInsCompleted: 0,
+        vaultFavorites: 0,
+        vaultCompletions: 0,
+        challengeCompleted: 0,
+        challengeTotal: 0,
+        challengePercent: 0
+    });
 });

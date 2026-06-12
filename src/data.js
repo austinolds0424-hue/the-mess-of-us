@@ -90,6 +90,59 @@
 
     const vaultCategories = ['All', 'Reset', 'Identity', 'Confidence', 'Overwhelm', 'Reflection'];
 
+    const villageCategories = [
+        {
+            id: 'coffee-chat',
+            title: 'Coffee Chat',
+            description: 'Light conversation starters for the moments when you just want company.'
+        },
+        {
+            id: 'wins',
+            title: 'Wins',
+            description: 'A place to notice tiny victories, soft progress, and proof you showed up.'
+        },
+        {
+            id: 'ask-the-village',
+            title: 'Ask the Village',
+            description: 'Future support threads for questions, encouragement, and shared wisdom.'
+        },
+        {
+            id: 'challenge-discussions',
+            title: 'Challenge Discussions',
+            description: 'A future home for talking through challenge prompts together.'
+        }
+    ];
+
+    const challengeCadences = [
+        {
+            id: 'daily',
+            title: 'Daily Challenges',
+            description: 'Short daily prompts will live here when challenge publishing is ready.'
+        },
+        {
+            id: 'weekly',
+            title: 'Weekly Challenges',
+            description: 'Longer weekly themes will help members explore one need at a time.'
+        },
+        {
+            id: 'monthly',
+            title: 'Monthly Challenges',
+            description: 'Monthly arcs will support deeper reflection without rushing the process.'
+        }
+    ];
+
+    const profilePlaceholders = [
+        'Profile photo',
+        'Bio',
+        'Achievements',
+        'Mood tracker',
+        'Water tracker',
+        'Self-care tracker',
+        'Goals',
+        'Routines',
+        'Boundaries'
+    ];
+
     const starterChallenge = {
         id: 'finding-yourself-again',
         title: 'Finding Yourself Again',
@@ -139,6 +192,9 @@
         resetSteps,
         vaultResources,
         vaultCategories,
+        villageCategories,
+        challengeCadences,
+        profilePlaceholders,
         starterChallenge
     };
 
@@ -149,6 +205,9 @@
             resetSteps,
             vaultResources,
             vaultCategories,
+            villageCategories,
+            challengeCadences,
+            profilePlaceholders,
             starterChallenge
         };
     }

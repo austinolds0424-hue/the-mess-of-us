@@ -217,6 +217,23 @@
         };
     };
 
+    const getProfileStats = (state, options = {}, date = new Date()) => {
+        const current = normalizeState(state, date);
+        const resourceIds = Array.isArray(options.resourceIds) ? options.resourceIds : [];
+        const challengeId = cleanText(options.challengeId);
+        const challengeDayIds = Array.isArray(options.challengeDayIds) ? options.challengeDayIds : [];
+        const challenge = getChallengeProgress(current, challengeId, challengeDayIds, date);
+
+        return {
+            checkInsCompleted: current.checkIns.length,
+            vaultFavorites: current.favorites.filter((id) => resourceIds.includes(id)).length,
+            vaultCompletions: current.completedResources.filter((id) => resourceIds.includes(id)).length,
+            challengeCompleted: challenge.completed,
+            challengeTotal: challenge.total,
+            challengePercent: challenge.total ? Math.round((challenge.completed / challenge.total) * 100) : 0
+        };
+    };
+
     const api = {
         STORAGE_VERSION,
         todayKey,
@@ -235,7 +252,8 @@
         recordResetSession,
         toggleChallengeStep,
         toggleChallengeDay,
-        getChallengeProgress
+        getChallengeProgress,
+        getProfileStats
     };
 
     global.MessState = api;

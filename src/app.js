@@ -26,6 +26,20 @@
 
     const challengeDayIds = () => MessData.starterChallenge.days.map((day) => day.id);
 
+    const renderReflectionSummary = (reflection) => {
+        if (!reflection.savedAt) {
+            return '<p class="quiet-note">No evening reflection saved yet. The Journal is here when you want to close the loop gently.</p>';
+        }
+
+        return `
+            <div class="today-summary">
+                <p class="eyebrow">Latest reflection</p>
+                <h3>${escapeHtml(reflection.win || 'You made room for your day.')}</h3>
+                <p>${escapeHtml(reflection.wentWell || reflection.challenged || 'A saved reflection is waiting in your Journal.')}</p>
+            </div>
+        `;
+    };
+
     const renderVaultFilters = () => `
         <div class="filter-row" aria-label="Vault categories">
             ${MessData.vaultCategories.map((category) => `
@@ -83,6 +97,88 @@
                 </button>
             </article>
         `).join('');
+    };
+
+    const renderStarterChallenge = () => {
+        const challenge = MessData.starterChallenge;
+        const progress = MessState.getChallengeProgress(state, challenge.id, challengeDayIds());
+        return `
+            <article class="panel challenge-panel">
+                <p class="eyebrow">Starter challenge</p>
+                <h2>${escapeHtml(challenge.title)}</h2>
+                <p>${escapeHtml(challenge.description)}</p>
+                <div class="challenge-progress" aria-label="Challenge progress">
+                    <span>${progress.completed} of ${progress.total} days complete</span>
+                    <div><i style="width: ${progress.total ? (progress.completed / progress.total) * 100 : 0}%"></i></div>
+                </div>
+                <div class="challenge-steps">${renderChallengeSteps()}</div>
+            </article>
+        `;
+    };
+
+    const renderChallengeCadences = () => `
+        <div class="placeholder-grid">
+            ${MessData.challengeCadences.map((cadence) => `
+                <article class="placeholder-card">
+                    <p class="eyebrow">${escapeHtml(cadence.id)}</p>
+                    <h3>${escapeHtml(cadence.title)}</h3>
+                    <p>${escapeHtml(cadence.description)}</p>
+                </article>
+            `).join('')}
+        </div>
+    `;
+
+    const renderVillagePreview = () => `
+        <section class="screen-panel">
+            <article class="status-card">
+                <p class="eyebrow">Village preview</p>
+                <h2>A soft landing for community, coming later.</h2>
+                <p>This is a static preview of the future Village. No posts, comments, likes, accounts, or database behavior are active yet.</p>
+            </article>
+            <div class="placeholder-grid">
+                ${MessData.villageCategories.map((category) => `
+                    <article class="placeholder-card">
+                        <p class="eyebrow">Thread category</p>
+                        <h3>${escapeHtml(category.title)}</h3>
+                        <p>${escapeHtml(category.description)}</p>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+    `;
+
+    const renderProfile = () => {
+        const stats = MessState.getProfileStats(state, {
+            resourceIds: vaultResourceIds(),
+            challengeId: MessData.starterChallenge.id,
+            challengeDayIds: challengeDayIds()
+        });
+
+        return `
+            <section class="screen-panel">
+                <article class="status-card profile-hero">
+                    <div class="profile-photo" aria-hidden="true">TM</div>
+                    <div>
+                        <p class="eyebrow">Local profile</p>
+                        <h2>Your quiet progress</h2>
+                        <p>A static, local-only profile preview. Real accounts and synced profiles will come later.</p>
+                    </div>
+                </article>
+                <section class="stats-grid" aria-label="Local stats">
+                    <article><span>${stats.checkInsCompleted}</span><p>check-ins completed</p></article>
+                    <article><span>${stats.vaultFavorites}</span><p>Vault favorites</p></article>
+                    <article><span>${stats.vaultCompletions}</span><p>Vault completions</p></article>
+                    <article><span>${stats.challengeCompleted}/${stats.challengeTotal}</span><p>challenge progress</p></article>
+                </section>
+                <article class="panel">
+                    <p class="eyebrow">Coming profile pieces</p>
+                    <div class="placeholder-list">
+                        ${MessData.profilePlaceholders.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}
+                    </div>
+                    <p class="quiet-note">These are placeholders only. No login, accounts, notifications, or synced trackers have been added.</p>
+                </article>
+            </section>
+        `;
     };
 
     const renderMoodChoices = (selectedMood = '') => MessData.moodChoices.map((mood) => `
@@ -187,30 +283,41 @@
         if (ui.activeTab === 'vault') {
             const favoriteCount = state.favorites.filter((id) => vaultResourceIds().includes(id)).length;
             const completedCount = state.completedResources.filter((id) => vaultResourceIds().includes(id)).length;
-            const challenge = MessData.starterChallenge;
-            const progress = MessState.getChallengeProgress(state, challenge.id, challengeDayIds());
             return `
                 <section class="screen-panel">
                     <p class="eyebrow">Vault</p>
                     <h2>Small tools for messy days</h2>
+                    <p class="section-copy">Favorites, completions, and filters stay local for now. Personalization from Daily Reset and challenge patterns will come later.</p>
                     <div class="vault-stats">
                         <span>${favoriteCount} favorites</span>
                         <span>${completedCount} completed</span>
                     </div>
                     ${renderVaultFilters()}
                     <div class="resource-list">${renderVaultCards()}</div>
-                    <aside class="panel challenge-panel">
-                        <p class="eyebrow">Starter challenge</p>
-                        <h2>${escapeHtml(challenge.title)}</h2>
-                        <p>${escapeHtml(challenge.description)}</p>
-                        <div class="challenge-progress" aria-label="Challenge progress">
-                            <span>${progress.completed} of ${progress.total} days complete</span>
-                            <div><i style="width: ${progress.total ? (progress.completed / progress.total) * 100 : 0}%"></i></div>
-                        </div>
-                        <div class="challenge-steps">${renderChallengeSteps()}</div>
-                    </aside>
                 </section>
             `;
+        }
+
+        if (ui.activeTab === 'village') {
+            return renderVillagePreview();
+        }
+
+        if (ui.activeTab === 'challenges') {
+            return `
+                <section class="screen-panel">
+                    ${renderStarterChallenge()}
+                    <section class="section-block">
+                        <p class="eyebrow">Challenge library preview</p>
+                        <h2>More rhythms are on the way.</h2>
+                        <p class="section-copy">Daily, weekly, and monthly challenges are placeholders for now. No publishing, discussion threads, or backend research tools have been added.</p>
+                        ${renderChallengeCadences()}
+                    </section>
+                </section>
+            `;
+        }
+
+        if (ui.activeTab === 'profile') {
+            return renderProfile();
         }
 
         if (ui.activeTab === 'journal') {
@@ -259,6 +366,14 @@
                         <span>Reset</span>
                         <strong>Take 3 minutes</strong>
                     </button>
+                    <button class="quick-card" type="button" data-action="tab" data-tab="journal">
+                        <span>Journal</span>
+                        <strong>Look back softly</strong>
+                    </button>
+                    <button class="quick-card" type="button" data-action="tab" data-tab="challenges">
+                        <span>Challenge</span>
+                        <strong>Keep finding you</strong>
+                    </button>
                 </section>
 
                 <article class="panel compact-panel">
@@ -267,9 +382,14 @@
                 </article>
 
                 <article class="panel compact-panel">
-                    <p class="eyebrow">Journal</p>
-                    <h2>Recent check-ins</h2>
-                    ${renderCheckInHistory()}
+                    <p class="eyebrow">Encouragement</p>
+                    <h2>You are allowed to begin small.</h2>
+                    <p class="section-copy">One honest check-in, one reset, one tiny promise. That counts here.</p>
+                </article>
+
+                <article class="panel compact-panel">
+                    <p class="eyebrow">Saved reflection</p>
+                    ${renderReflectionSummary(reflection)}
                 </article>
             </section>
         `;
@@ -278,10 +398,10 @@
     const renderBottomNav = () => {
         const tabs = [
             ['home', 'Home'],
-            ['checkin', 'Check-In'],
-            ['reset', 'Reset'],
+            ['village', 'Village'],
+            ['challenges', 'Challenges'],
             ['vault', 'Vault'],
-            ['journal', 'Journal']
+            ['profile', 'Profile']
         ];
 
         return `
